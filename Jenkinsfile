@@ -2,8 +2,10 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = 'hello-java'
-        IMAGE_TAG  = "${BUILD_NUMBER}"
+        DOCKERHUB_USER = 'gagan535'            // <-- change this
+        IMAGE_NAME     = "${DOCKERHUB_USER}/hello-java"
+        IMAGE_TAG      = "${BUILD_NUMBER}"
+        DOCKER_CREDS   = credentials('my-itiss-dockerhub-key')  // Jenkins credential ID (Username + Access Token)
     }
 
     stages {
@@ -27,28 +29,48 @@ pipeline {
             }
         }
 
-        // ---------- Task 2 ----------
+        // ---------- Task 2 (carried over) ----------
         stage('Build Docker Image') {
             steps {
                 sh 'docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .'
-                sh 'docker images ${IMAGE_NAME}'
             }
         }
 
         stage('Run Docker Container') {
             steps {
-                // --rm removes the container once it prints and exits
                 sh 'docker run --rm ${IMAGE_NAME}:${IMAGE_TAG}'
+            }
+        }
+
+        // ---------- Task 3 ----------
+        stage('Tag Image') {
+            steps {
+                sh 'docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest'
+                sh 'docker images ${IMAGE_NAME}'
+            }
+        }
+
+        stage('Push to DockerHub') {
+            steps {
+                sh '''
+                    echo "$DOCKER_CREDS_PSW" | docker login -u "$DOCKER_CREDS_USR" --password-stdin
+                    docker push ${IMAGE_NAME}:${IMAGE_TAG}
+                    docker push ${IMAGE_NAME}:latest
+                '''
             }
         }
     }
 
     post {
+        always {
+            sh 'docker logout || true'
+        }
         success {
-            echo 'Docker image built and container ran successfully.'
+            echo "Image pushed: https://hub.docker.com/repository/docker/gagan535/${IMAGE_NAME}/tags"
         }
         failure {
             echo 'Pipeline failed - check the stage logs above.'
         }
     }
 }
+
