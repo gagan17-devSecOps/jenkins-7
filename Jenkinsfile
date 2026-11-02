@@ -11,7 +11,7 @@ pipeline {
         // ---------- Task 1 (carried over) ----------
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/your-username/hello-java.git' // <-- change this
+                git branch: 'main', url: 'https://github.com/gagan17-devSecOps/jenkins-7.git' // <-- change this
             }
         }
 
