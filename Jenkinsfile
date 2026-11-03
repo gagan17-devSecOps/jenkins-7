@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_USER = 'gagan535'            // <-- change this
+        DOCKERHUB_USER = 'gagan535'            
         IMAGE_NAME     = "${DOCKERHUB_USER}/hello-java"
         IMAGE_TAG      = "${BUILD_NUMBER}"
         DOCKER_CREDS   = credentials('my-itiss-dockerhub-key')  // Jenkins credential ID (Username + Access Token)
@@ -13,7 +13,7 @@ pipeline {
         // ---------- Task 1 (carried over) ----------
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/gagan17-devSecOps/jenkins-7.git' // <-- change this
+                git branch: 'main', url: 'https://github.com/gagan17-devSecOps/jenkins-7.git'
             }
         }
 
@@ -42,7 +42,7 @@ pipeline {
             }
         }
 
-        // ---------- Task 3 ----------
+        // ---------- Task 3 (carried over) ----------
         stage('Tag Image') {
             steps {
                 sh 'docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest'
@@ -59,6 +59,29 @@ pipeline {
                 '''
             }
         }
+
+        // ---------- Task 4 (New) ----------
+        stage('Deploy to Kubernetes') {
+            steps {
+                sh 'kubectl apply -f deployment.yaml'
+                sh 'kubectl apply -f service.yaml'
+            }
+        }
+
+        stage('Verify Kubernetes Pod') {
+            steps {
+                sh '''
+                    # Force rollout restart to pull the freshly pushed image tag
+                    kubectl rollout restart deployment/java-app-deployment
+                    
+                    # Wait for deployment completion
+                    kubectl rollout status deployment/java-app-deployment
+                    
+                    # Verify running pods
+                    kubectl get pods -l app=java-app
+                '''
+            }
+        }
     }
 
     post {
@@ -66,11 +89,10 @@ pipeline {
             sh 'docker logout || true'
         }
         success {
-            echo "Image pushed: https://hub.docker.com/repository/docker/gagan535/${IMAGE_NAME}/tags"
+            echo "Image pushed and deployed successfully!"
         }
         failure {
             echo 'Pipeline failed - check the stage logs above.'
         }
     }
 }
-
