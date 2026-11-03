@@ -60,11 +60,20 @@ pipeline {
             }
         }
 
-        // ---------- Task 4 (New) ----------
+        // ---------- Task 4 (Fixed) ----------
         stage('Deploy to Kubernetes') {
             steps {
-                sh 'kubectl apply -f deployment.yaml'
-                sh 'kubectl apply -f service.yaml'
+                sh '''
+                    # 1. Start Minikube (if not already running) using the Docker driver
+                    minikube start --driver=docker || minikube status
+
+                    # 2. Assign the correct userspace/context for kubectl
+                    minikube update-context || true
+
+                    # 3. Apply deployment and service manifests
+                    kubectl apply -f deployment.yaml
+                    kubectl apply -f service.yaml
+                '''
             }
         }
 
