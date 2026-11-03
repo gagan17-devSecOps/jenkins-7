@@ -61,19 +61,48 @@ pipeline {
         }
 
         // ---------- Task 4 (Fixed) ----------
+
+        stage('Debug Kubernetes Connection') {
+            steps {
+                withCredentials([
+                    file(
+                        credentialsId: 'minikube-config',
+                        variable: 'KUBECONFIG'
+                    )
+                ]) {
+                    sh '''
+                        set -eu
+
+                        echo "Checking Kubernetes context..."
+                        kubectl config current-context
+
+                        echo "Checking Kubernetes API..."
+                        kubectl get --raw=/version
+
+                        echo "Checking cluster nodes..."
+                        kubectl get nodes
+                    '''
+                }
+            }
+        }
+
+
+
+
         stage('Deploy to Kubernetes') {
             steps {
-                sh '''
-                    # 1. Start Minikube (if not already running) using the Docker driver
-                    minikube start --driver=docker || minikube status
-
-                    # 2. Assign the correct userspace/context for kubectl
-                    minikube update-context || true
-
-                    # 3. Apply deployment and service manifests
-                    kubectl apply -f deployment.yaml
-                    kubectl apply -f service.yaml
-                '''
+		withCredentials([
+                    file(
+                        credentialsId: 'minikube-config-vm',
+                        variable: 'KUBECONFIG'
+                    )
+                ]) {	
+		sh '''
+			set -eu
+                        # 1. Apply deployment and service manifests
+                        kubectl apply -f deployment.yaml
+                        kubectl apply -f service.yaml
+                   '''
             }
         }
 
